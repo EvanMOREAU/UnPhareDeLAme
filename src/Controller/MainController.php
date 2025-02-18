@@ -9,15 +9,19 @@ use App\Entity\Parcour;
 use App\Entity\Service;
 use App\Form\ParcourType;
 use App\Form\ServiceType;
+use App\Entity\Consultant;
 use App\Form\Service1Type;
+use App\Form\ConsultantType;
 use App\Form\ServiceEditType;
 use App\Repository\TypeRepository;
 use App\Repository\ParcourRepository;
 use App\Repository\ServiceRepository;
-use App\Repository\WebsiteElementRepository;
 use App\Services\ImageUploaderHelper;
+use App\Repository\ConsultantRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
+use App\Repository\ConsultantDataRepository;
+use App\Repository\WebsiteElementRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -43,34 +47,34 @@ class MainController extends AbstractController
         EntityManagerInterface $entityManager,
         ImageUploaderHelper $imageUploaderHelper,
         Security $security,
-        WebsiteElementRepository $websiteElementRepository
+        WebsiteElementRepository $websiteElementRepository,
+        ConsultantRepository $consultantRepository,
+        ConsultantDataRepository $consultantDataRepository
     ): Response {
         // Création d'un nouveau service
         $user = $security->getUser();
 
-        if($user){
-            $formPassword = $this->createForm(UserType::class, $user);
-            $formPassword->handleRequest($request);
-    
-            if ($formPassword->isSubmitted() && $formPassword->isValid()) {
-    
-                $cp = $formPassword->get('currentPassword')->getData();
-                $hashedPassword = $this->passwordHasher->hashPassword(
+        $formPassword = $this->createForm(UserType::class, $user);
+        $formPassword->handleRequest($request);
+
+        if ($formPassword->isSubmitted() && $formPassword->isValid()) {
+
+            $cp = $formPassword->get('currentPassword')->getData();
+            $hashedPassword = $this->passwordHasher->hashPassword(
+                $user,
+                $cp
+            );
+            if($hashedPassword == $user->getPassword()){
+                $np = $formPassword->get('password')->getData();
+                $hashedNewPassword = $this->passwordHasher->hashPassword(
                     $user,
-                    $cp
+                    $np
                 );
-                if($hashedPassword == $user->getPassword()){
-                    $np = $formPassword->get('password')->getData();
-                    $hashedNewPassword = $this->passwordHasher->hashPassword(
-                        $user,
-                        $np
-                    );
-                    $user->setPassword($hashedNewPassword);
-                }
-                $entityManager->flush();
-    
-                return $this->redirectToRoute('app_main', [], Response::HTTP_SEE_OTHER);
+                $user->setPassword($hashedNewPassword);
             }
+            $entityManager->flush();
+
+            return $this->redirectToRoute('app_main', [], Response::HTTP_SEE_OTHER);
         }
         $newService = new Service();
         $formNewService = $this->createForm(ServiceType::class, $newService);
@@ -108,6 +112,17 @@ class MainController extends AbstractController
 
         if ($formNewType->isSubmitted() && $formNewType->isValid()) {
             $entityManager->persist($type);
+            $entityManager->flush();
+
+            return $this->redirectToRoute('app_main', [], Response::HTTP_SEE_OTHER);
+        }
+        // Création d'un nouveau consultant
+        $consultant = new Consultant();
+        $formNewConsultant = $this->createForm(ConsultantType::class, $consultant);
+        $formNewConsultant->handleRequest($request);
+
+        if ($formNewConsultant->isSubmitted() && $formNewConsultant->isValid()) {
+            $entityManager->persist($consultant);
             $entityManager->flush();
 
             return $this->redirectToRoute('app_main', [], Response::HTTP_SEE_OTHER);
@@ -150,6 +165,9 @@ class MainController extends AbstractController
             'formNewType' => $formNewType->createView(),
             'formNewParcour' => $formParcour,
             'formPassword' => $formPassword,
+            'formNewConsultant' => $formNewConsultant,
+            'Consultants' => $consultantRepository->findAll(),
+            'ConsultantsDatas' => $consultantDataRepository->findAll(),
             'wE' => $websiteElementRepository->findAll(),
         ]);
     }

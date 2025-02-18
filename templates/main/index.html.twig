@@ -30,14 +30,17 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarResponsive">
                     <ul class="navbar-nav text-uppercase ms-auto py-4 py-lg-0">
-                        <li class="nav-item"><a class="nav-link" href="#presentation">Présentation</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#portfolio">Services</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#about">Parcours</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
                         {% if app.user %}
-                            <li class="nav-item"><a class="nav-link" data-bs-toggle="modal" data-bs-target="#adminModal">Gérer</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{path('app_main')}}">Accueil</a></li>
+                            <li class="nav-item"><a class="nav-link" data-bs-toggle="modal" data-bs-target="#consultantsIndexBackdrop">Gestion des consultants</a></li>
+                            <li class="nav-item"><a class="nav-link" data-bs-toggle="modal" data-bs-target="#adminModal">Gérer le site</a></li>
                             <li class="nav-item"><a class="nav-link" data-bs-toggle="modal" data-bs-target="#changePassword">Changer de mot de passe</a></li>
                             <li class="nav-item"><a class="nav-link" href='/logout'>Déconnexion</a></li>
+                        {% else %}
+                            <li class="nav-item"><a class="nav-link" href="#presentation">Présentation</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#portfolio">Services</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#about">Parcours</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
                         {% endif %}
                     </ul>
                 </div>
@@ -310,6 +313,123 @@
             <!-- ############################################# Services ########################################## -->
             <!-- ///////////////////////////////////////////////////////////////////////////////////////////////// -->
             <!-- ///////////////////////////////////////////////////////////////////////////////////////////////// -->
+            <!-- Modal index consultants -->
+<div class="modal fade" id="consultantsIndexBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="BackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="staticBackdropLabel">Mes consultants</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                
+                <!-- Barre de recherche -->
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="searchConsultant" placeholder="Rechercher par nom, prénom ou date de naissance (jj/mm/aaaa)">
+                </div>
+
+                <!-- Liste des consultants -->
+                <ul class="list-group" id="consultantList">
+                    {% for c in Consultants %}
+                        <li class="list-group-item consultant-item">
+                            <span class="consultant-name">{{ c.firstName }} {{ c.lastName }}</span> <br>
+                            <span class="consultant-date">{{ c.dateNaiss|date("d/m/Y") }}</span>
+                            <div class="text-end">
+                                <a class="btn btn-outline-primary" href="{{ path('app_consultant', {'id': c.id}) }}">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#deleteConsultantBackdrop{{ c.id }}">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#newConsultantsackdrop">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script de filtrage -->
+<script>
+document.getElementById('searchConsultant').addEventListener('input', function () {
+    let filter = this.value.toLowerCase();
+    let consultants = document.querySelectorAll('.consultant-item');
+
+    consultants.forEach(function (consultant) {
+        let name = consultant.querySelector('.consultant-name').textContent.toLowerCase();
+        let date = consultant.querySelector('.consultant-date').textContent.toLowerCase();
+
+        if (name.includes(filter) || date.includes(filter)) {
+            consultant.style.display = "";
+        } else {
+            consultant.style.display = "none";
+        }
+    });
+});
+</script>
+
+            {% for c in Consultants %}  
+            <!-- Modal New Service -->
+                <div class="modal fade" id="deleteConsultantBackdrop{{c.id}}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="BackdropLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5" id="editEmailModalLabel">Modification de votre adresse Email</h1>
+                                    <a class="fa-solid fa-xmark" data-bs-dismiss="modal" aria-label="Close"></a>
+                                </div>
+                                <div class="modal-body">
+                                    Voulez-vous vraiment supprimer le consultant ?
+                                </div>
+                                <div class="modal-footer">
+                                    <form method="POST" action="{{ path('delete_consultant', {'id': c.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ c.id) }}">
+                                        <button type="submit" class="btn btn-danger">Supprimer</button>
+                                    </form>
+                                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">Annuler</button>
+                                </div>
+                            </div>
+                    </div>
+                </div>
+            {% endfor %}
+            <!-- Modal new consultant -->
+            <div class="modal fade" id="newConsultantsackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="BackdropLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-scrollable">
+                     {{ form_start(formNewConsultant) }}
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h1 class="modal-title fs-5" id="editEmailModalLabel">Modification de votre adresse Email</h1>
+                                <a class="fa-solid fa-xmark" data-bs-dismiss="modal" aria-label="Close"></a>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label for="email" class="col-form-label">Prénom:</label>
+                                    {{ form_widget(formNewConsultant.firstName) }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="email" class="col-form-label">Nom:</label>
+                                    {{ form_widget(formNewConsultant.lastName) }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="email" class="col-form-label">Date de naissance:</label>
+                                    {{ form_widget(formNewConsultant.dateNaiss) }}
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#consultantsIndexBackdrop">Retour</button>
+                                <button type="submit" class="btn btn-success" id="submitBtn">Enregistrer</button>
+                            </div>
+                        </div>
+                    {{ form_end(formNewConsultant) }}
+                </div>
+            </div>
             <!-- Modal Personnalisation -->
             <div class="modal fade" id="persoIndexBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="BackdropLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-scrollable">
@@ -332,7 +452,6 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#adminModal">Retour</button>
-                        <button type="button" class="btn btn-success"data-bs-dismiss='modal' data-bs-toggle="modal" data-bs-target="#servicesNewBackdrop"><i class="fa-solid fa-plus"></i></button>
                     </div>
                     </div>
                 </div>

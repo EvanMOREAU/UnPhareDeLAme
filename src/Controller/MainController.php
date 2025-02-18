@@ -175,11 +175,10 @@ class MainController extends AbstractController
     #[Route('/service/delete/{id}', name: 'app_main_service_delete', methods: ['POST'])]
     public function deleteService(Request $request, Service $service, EntityManagerInterface $entityManager): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$service->getId(), $request->get('csrf_token'))) {
+        if ($this->isCsrfTokenValid('delete'.$service->getId(), $request->getPayload()->getString('_token'))) {
             $entityManager->remove($service);
             $entityManager->flush();
         }
-
         return $this->redirectToRoute('app_main', [], Response::HTTP_SEE_OTHER);
     }
 
